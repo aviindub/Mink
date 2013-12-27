@@ -95,7 +95,7 @@ abstract class Element implements ElementInterface
                 break;
             }
             sleep(1);
-        } while ($timeout > (time() - $start)) 
+        } while ($timeout > (time() - $start));
         return $elements;
     }
 
