@@ -140,14 +140,14 @@ class Mink
      *
      * @param Session|string $session session object or name
      *
-     * @return WebAssert
+     * @return WaitingWebAssert
      */
     public function assertSession($session = null)
     {
         if (!($session instanceof Session)) {
             $session = $this->getSession($session);
         }
-        return new WebAssert($session);
+        return new WaitingWebAssert($session);
     }
 
     /**
