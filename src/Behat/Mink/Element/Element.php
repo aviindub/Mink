@@ -77,8 +77,10 @@ abstract class Element implements ElementInterface
      *
      * @return NodeElement[]
      */
-    public function findAll($selector, $locator)
+    public function findAll($selector, $locator, $timeout = 20000)
     {
+        $start = time();
+
         $xpath = $this->getSession()->getSelectorsHandler()->selectorToXpath($selector, $locator);
 
         // add parent xpath before element selector
@@ -87,8 +89,14 @@ abstract class Element implements ElementInterface
         } else {
             $xpath = $this->getXpath().'/'.$xpath;
         }
-
-        return $this->getSession()->getDriver()->find($xpath);
+        do {
+            $elements = $this->getSession()->getDriver()->find($xpath);
+            if ($elements && !empty($elements)) {
+                break;
+            }
+            sleep(1);
+        } while ($timeout > (time() - $start)) 
+        return $elements;
     }
 
     /**
