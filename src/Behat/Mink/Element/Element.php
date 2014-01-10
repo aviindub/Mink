@@ -77,7 +77,7 @@ abstract class Element implements ElementInterface
      *
      * @return NodeElement[]
      */
-    public function findAll($selector, $locator, $timeout = 20000)
+    public function findAll($selector, $locator, $timeout = 20)
     {
         $start = time();
 
