@@ -51,6 +51,15 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
         self::$mink->resetSessions();
     }
 
+    protected function onNotSuccessfulTest(\Exception $e)
+    {
+        if ($e instanceof UnsupportedDriverActionException) {
+            $this->markTestSkipped($e->getMessage());
+        }
+
+        parent::onNotSuccessfulTest($e);
+    }
+
     public function testRedirect()
     {
         $this->getSession()->visit($this->pathTo('/redirector.php'));
@@ -116,6 +125,7 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
         $page = $session->getPage();
 
         $field = $page->findById('poney-button');
+        $this->assertNotNull($field);
         $this->assertEquals('poney', $field->getValue());
     }
 
@@ -305,7 +315,7 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($page->find('xpath', '//div/strong[2]')->hasAttribute('class'));
 
         $strongs = $page->findAll('css', 'div#core > strong');
-        $this->assertEquals(3, count($strongs));
+        $this->assertCount(3, $strongs);
         $this->assertEquals('Lorem', $strongs[0]->getText());
         $this->assertEquals('pariatur', $strongs[2]->getText());
 
@@ -334,6 +344,7 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
 
         $element = $this->getSession()->getPage()->findById('attr-elem[' . $attributeName . ']');
 
+        $this->assertNotNull($element);
         $this->assertSame($attributeValue, $element->getAttribute($attributeName));
     }
 
@@ -394,11 +405,11 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
 
         $traversDiv = $this->getSession()->getPage()->findAll('css', 'div.travers');
 
-        $this->assertEquals(1, count($traversDiv));
+        $this->assertCount(1, $traversDiv);
         $traversDiv = $traversDiv[0];
 
         $subDivs = $traversDiv->findAll('css', 'div.sub');
-        $this->assertEquals(3, count($subDivs));
+        $this->assertCount(3, $subDivs);
 
         $this->assertTrue($subDivs[2]->hasLink('some deep url'));
         $this->assertFalse($subDivs[2]->hasLink('come deep url'));
@@ -420,6 +431,7 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
         $page = $this->getSession()->getPage();
         $link = $page->findLink('Redirect me to');
 
+        $this->assertNotNull($link);
         $this->assertRegExp('/redirector\.php$/', $link->getAttribute('href'));
         $link->click();
 
@@ -429,6 +441,7 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
         $page = $this->getSession()->getPage();
         $link = $page->findLink('basic form image');
 
+        $this->assertNotNull($link);
         $this->assertRegExp('/basic_form\.php$/', $link->getAttribute('href'));
         $link->click();
 
@@ -493,6 +506,38 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
         }
     }
 
+    /**
+     * @dataProvider formSubmitWaysDataProvider
+     */
+    public function testFormSubmitWays($submitVia)
+    {
+        $session = $this->getSession();
+        $session->visit($this->pathTo('/basic_form.php'));
+        $page = $session->getPage();
+
+        $firstname = $page->findField('first_name');
+        $this->assertNotNull($firstname);
+        $firstname->setValue('Konstantin');
+
+        $page->findButton($submitVia)->click();
+
+        if ($this->safePageWait(5000, 'document.getElementById("first") !== null')) {
+            $this->assertEquals('Firstname: Konstantin', $page->find('css', '#first')->getText());
+        } else {
+            $this->fail('Form was never submitted');
+        }
+    }
+
+    public function formSubmitWaysDataProvider()
+    {
+        return array(
+            array('Save'),
+            array('input-type-image'),
+            array('button-without-type'),
+            array('button-type-submit'),
+        );
+    }
+
     public function testFormSubmit()
     {
         $session = $this->getSession();
@@ -501,11 +546,7 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
         $page = $session->getPage();
         $page->findField('first_name')->setValue('Konstantin');
 
-        try {
-            $page->find('xpath', 'descendant-or-self::form[1]')->submit();
-        } catch (UnsupportedDriverActionException $e) {
-            $this->markTestSkipped('Driver doesn\'t support form submission');
-        }
+        $page->find('xpath', 'descendant-or-self::form[1]')->submit();
 
         if ($this->safePageWait(5000, 'document.getElementById("first") !== null')) {
             $this->assertEquals('Firstname: Konstantin', $page->find('css', '#first')->getText());
@@ -531,6 +572,7 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('Basic Get Form Page', $page->find('css', 'h1')->getText());
 
         $search = $page->findField('q');
+        $this->assertNotNull($search);
         $search->setValue('some#query');
         $page->pressButton('Find');
 
@@ -565,6 +607,7 @@ abstract class GeneralDriverTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(array('1', '3'), $multiSelect->getValue());
 
         $button = $page->findButton('Register');
+        $this->assertNotNull($button);
         $button->press();
 
         $space = ' ';
@@ -591,14 +634,11 @@ OUT;
 
         $optionValueEscaped = $session->getSelectorsHandler()->xpathLiteral($optionValue);
         $option = $select->find('xpath', 'descendant-or-self::option[@value = ' . $optionValueEscaped . ']');
+        $this->assertNotNull($option);
 
-        try {
-            $this->assertFalse($option->isSelected());
-            $select->selectOption($optionText);
-            $this->assertTrue($option->isSelected());
-        } catch (UnsupportedDriverActionException $e) {
-            $this->markTestSkipped('Element selection check is not supported by the driver');
-        }
+        $this->assertFalse($option->isSelected());
+        $select->selectOption($optionText);
+        $this->assertTrue($option->isSelected());
     }
 
     public function testElementSelectedStateCheckDataProvider()
@@ -676,6 +716,7 @@ OUT;
         $about->attachFile($this->mapRemoteFilePath(__DIR__ . '/web-fixtures/some_file.txt'));
 
         $button = $page->findButton('Register');
+        $this->assertNotNull($button);
 
         $page->fillField('first_name', 'Foo "item"');
         $page->fillField('last_name', 'Bar');
@@ -767,6 +808,7 @@ OUT;
         $this->assertEquals('tag3', $third->getValue());
 
         $button = $page->findButton('Register');
+        $this->assertNotNull($button);
         $button->press();
 
         $space = ' ';
@@ -787,7 +829,6 @@ OUT;
      * @param string $file File path.
      *
      * @return string
-     * @access protected
      */
     protected function mapRemoteFilePath($file)
     {
@@ -804,6 +845,7 @@ OUT;
         $page = $this->getSession()->getPage();
 
         $button = $page->findButton('Login');
+        $this->assertNotNull($button);
         $button->press();
 
         $toSearch = array(
@@ -819,6 +861,84 @@ OUT;
         }
     }
 
+    public function testHtml5FormInputAttribute()
+    {
+        $this->getSession()->visit($this->pathTo('/html5_form.html'));
+        $page = $this->getSession()->getPage();
+
+        $firstName = $page->findField('first_name');
+        $lastName = $page->findField('last_name');
+
+        $this->assertNotNull($firstName);
+        $this->assertNotNull($lastName);
+
+        $this->assertEquals('not set', $lastName->getValue());
+        $firstName->setValue('John');
+        $lastName->setValue('Doe');
+
+        $this->assertEquals('Doe', $lastName->getValue());
+
+        $page->pressButton('Submit in form');
+
+        if ($this->safePageWait(5000, 'document.getElementsByTagName("title") !== null')) {
+            $out = <<<OUT
+  'first_name' = 'John',
+  'last_name' = 'Doe',
+OUT;
+            $this->assertContains($out, $page->getContent());
+            $this->assertNotContains('other_field', $page->getContent());
+        }
+    }
+
+    public function testHtml5FormButtonAttribute()
+    {
+        $this->getSession()->visit($this->pathTo('/html5_form.html'));
+        $page = $this->getSession()->getPage();
+
+        $firstName = $page->findField('first_name');
+        $lastName = $page->findField('last_name');
+
+        $this->assertNotNull($firstName);
+        $this->assertNotNull($lastName);
+
+        $firstName->setValue('John');
+        $lastName->setValue('Doe');
+
+        $page->pressButton('Submit outside form');
+
+        if ($this->safePageWait(5000, 'document.getElementsByTagName("title") !== null')) {
+            $out = <<<OUT
+  'first_name' = 'John',
+  'last_name' = 'Doe',
+  'submit_button' = 'test',
+OUT;
+            $this->assertContains($out, $page->getContent());
+        }
+    }
+
+    public function testHtml5FormOutside()
+    {
+        $this->getSession()->visit($this->pathTo('/html5_form.html'));
+        $page = $this->getSession()->getPage();
+
+        $field = $page->findField('other_field');
+
+        $this->assertNotNull($field);
+
+        $field->setValue('hello');
+
+        $page->pressButton('Submit separate form');
+
+        if ($this->safePageWait(5000, 'document.getElementsByTagName("title") !== null')) {
+            $out = <<<OUT
+  'other_field' = 'hello',
+OUT;
+            $this->assertContains($out, $page->getContent());
+            $this->assertNotContains('first_name', $page->getContent());
+        }
+
+    }
+
     /**
      * @dataProvider setBasicAuthDataProvider
      */
@@ -826,11 +946,7 @@ OUT;
     {
         $session = $this->getSession();
 
-        try {
-            $session->setBasicAuth($user, $pass);
-        } catch (UnsupportedDriverActionException $e) {
-            $this->markTestSkipped('This driver doesn\'t support basic authentication');
-        }
+        $session->setBasicAuth($user, $pass);
 
         $session->visit($this->pathTo('/basic_auth.php'));
 
@@ -843,6 +959,71 @@ OUT;
             array('mink-user', 'mink-password', 'is authenticated'),
             array('', '', 'is not authenticated'),
         );
+    }
+
+    public function testHtmlDecodingNotPerformed()
+    {
+        $session = $this->getSession();
+        $session->visit($this->pathTo('/html_decoding.html'));
+        $page = $session->getPage();
+
+        $span = $page->find('css', 'span');
+        $input = $page->find('css', 'input');
+
+        $this->assertNotNull($span);
+        $this->assertNotNull($input);
+
+        $expectedHtml = '<span custom-attr="&amp;">some text</span>';
+        $this->assertContains($expectedHtml, $page->getHtml(), '.innerHTML is returned as-is');
+        $this->assertContains($expectedHtml, $page->getContent(), '.outerHTML is returned as-is');
+
+        $this->assertEquals('&', $span->getAttribute('custom-attr'), '.getAttribute value is decoded');
+        $this->assertEquals('&', $input->getAttribute('value'), '.getAttribute value is decoded');
+        $this->assertEquals('&', $input->getValue(), 'node value is decoded');
+    }
+
+    public function testStatuses()
+    {
+        $this->getSession()->visit($this->pathTo('/index.php'));
+
+        $this->assertEquals(200, $this->getSession()->getStatusCode());
+        $this->assertEquals($this->pathTo('/index.php'), $this->getSession()->getCurrentUrl());
+
+        $this->getSession()->visit($this->pathTo('/404.php'));
+
+        $this->assertEquals($this->pathTo('/404.php'), $this->getSession()->getCurrentUrl());
+        $this->assertEquals(404, $this->getSession()->getStatusCode());
+        $this->assertEquals('Sorry, page not found', $this->getSession()->getPage()->getContent());
+    }
+
+    public function testHeaders()
+    {
+        $this->getSession()->setRequestHeader('Accept-Language', 'fr');
+        $this->getSession()->visit($this->pathTo('/headers.php'));
+
+        $this->assertContains('[HTTP_ACCEPT_LANGUAGE] => fr', $this->getSession()->getPage()->getContent());
+    }
+
+    public function testScreenshot()
+    {
+        if (!extension_loaded('gd')) {
+            $this->markTestSkipped('Testing screenshots requires the GD extension');
+        }
+
+        $this->getSession()->visit($this->pathTo('/index.php'));
+
+        $screenShot = $this->getSession()->getScreenshot();
+
+        $this->assertInternalType('string', $screenShot);
+        $this->assertFalse(base64_decode($screenShot, true), 'The returned screenshot should not be base64-encoded');
+
+        $img = imagecreatefromstring($screenShot);
+
+        if (false === $img) {
+            $this->fail('The screenshot should be a valid image');
+        }
+
+        imagedestroy($img);
     }
 
     protected function pathTo($path)

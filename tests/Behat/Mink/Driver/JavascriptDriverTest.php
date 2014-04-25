@@ -2,9 +2,7 @@
 
 namespace Tests\Behat\Mink\Driver;
 
-use Behat\Mink\Exception\UnsupportedDriverActionException;
-
-require_once 'GeneralDriverTest.php';
+require_once __DIR__ . '/GeneralDriverTest.php';
 
 abstract class JavascriptDriverTest extends GeneralDriverTest
 {
@@ -68,24 +66,14 @@ abstract class JavascriptDriverTest extends GeneralDriverTest
         $session = $this->getSession();
         $page    = $session->getPage();
 
-        try {
-            $windowName = $this->getSession()->getWindowName();
-        } catch (UnsupportedDriverActionException $e) {
-            $this->markTestSkipped('The current driver does not support getWindowName function.');
-            return;
-        }
+        $windowName = $this->getSession()->getWindowName();
 
         $this->assertNotNull($windowName);
 
         $page->clickLink('Popup #1');
         $page->clickLink('Popup #2');
 
-        try {
-            $windowNames = $this->getSession()->getWindowNames();
-        } catch (UnsupportedDriverActionException $e) {
-            $this->markTestSkipped('The current driver does not support getWindowNames function.');
-            return;
-        }
+        $windowNames = $this->getSession()->getWindowNames();
 
         $this->assertNotNull($windowNames[0]);
         $this->assertNotNull($windowNames[1]);
@@ -111,38 +99,99 @@ abstract class JavascriptDriverTest extends GeneralDriverTest
     {
         $this->getSession()->visit($this->pathTo('/js_test.php'));
 
-        $found = $this->getSession()->wait(5000, '$("#draggable:visible").length == 1');
+        $found = $this->getSession()->wait(5000, '$("#draggable").length == 1');
         $this->assertTrue($found);
     }
 
-    public function testMouseEvents()
+    /**
+     * @group mouse-events
+     */
+    public function testClick()
     {
         $this->getSession()->visit($this->pathTo('/js_test.php'));
-
         $clicker = $this->getSession()->getPage()->find('css', '.elements div#clicker');
-
+        $this->assertNotNull($clicker);
         $this->assertEquals('not clicked', $clicker->getText());
 
         $clicker->click();
         $this->assertEquals('single clicked', $clicker->getText());
+    }
+
+    /**
+     * @group mouse-events
+     */
+    public function testDoubleClick()
+    {
+        $this->getSession()->visit($this->pathTo('/js_test.php'));
+        $clicker = $this->getSession()->getPage()->find('css', '.elements div#clicker');
+        $this->assertNotNull($clicker);
+        $this->assertEquals('not clicked', $clicker->getText());
 
         $clicker->doubleClick();
         $this->assertEquals('double clicked', $clicker->getText());
+    }
+
+    /**
+     * @group mouse-events
+     */
+    public function testRightClick()
+    {
+        $this->getSession()->visit($this->pathTo('/js_test.php'));
+        $clicker = $this->getSession()->getPage()->find('css', '.elements div#clicker');
+        $this->assertNotNull($clicker);
+        $this->assertEquals('not clicked', $clicker->getText());
 
         $clicker->rightClick();
         $this->assertEquals('right clicked', $clicker->getText());
-
-        $clicker->focus();
-        $this->assertEquals('focused', $clicker->getText());
-
-        $clicker->blur();
-        $this->assertEquals('blured', $clicker->getText());
-
-        $clicker->mouseOver();
-        $this->assertEquals('mouse overed', $clicker->getText());
     }
 
-    public function testKeyboardEvents()
+    /**
+     * @group mouse-events
+     */
+    public function testFocus()
+    {
+        $this->getSession()->visit($this->pathTo('/js_test.php'));
+        $focusBlurDetector = $this->getSession()->getPage()->find('css', '.elements input#focus-blur-detector');
+        $this->assertNotNull($focusBlurDetector);
+        $this->assertEquals('no action detected', $focusBlurDetector->getValue());
+
+        $focusBlurDetector->focus();
+        $this->assertEquals('focused', $focusBlurDetector->getValue());
+    }
+
+    /**
+     * @group mouse-events
+     * @depends testFocus
+     */
+    public function testBlur()
+    {
+        $this->getSession()->visit($this->pathTo('/js_test.php'));
+        $focusBlurDetector = $this->getSession()->getPage()->find('css', '.elements input#focus-blur-detector');
+        $this->assertNotNull($focusBlurDetector);
+        $this->assertEquals('no action detected', $focusBlurDetector->getValue());
+
+        $focusBlurDetector->blur();
+        $this->assertEquals('blured', $focusBlurDetector->getValue());
+    }
+
+    /**
+     * @group mouse-events
+     */
+    public function testMouseOver()
+    {
+        $this->getSession()->visit($this->pathTo('/js_test.php'));
+        $mouseOverDetector = $this->getSession()->getPage()->find('css', '.elements div#mouseover-detector');
+        $this->assertNotNull($mouseOverDetector);
+        $this->assertEquals('no mouse action detected', $mouseOverDetector->getText());
+
+        $mouseOverDetector->mouseOver();
+        $this->assertEquals('mouse overed', $mouseOverDetector->getText());
+    }
+
+    /**
+     * @dataProvider provideKeyboardEventsModifiers
+     */
+    public function testKeyboardEvents($modifier, $eventProperties)
     {
         $this->getSession()->visit($this->pathTo('/js_test.php'));
 
@@ -151,34 +200,44 @@ abstract class JavascriptDriverTest extends GeneralDriverTest
         $input3 = $this->getSession()->getPage()->find('css', '.elements input.input.third');
         $event  = $this->getSession()->getPage()->find('css', '.elements .text-event');
 
-        $input1->keyDown('u');
-        $this->assertEquals('key downed:0', $event->getText());
+        $this->assertNotNull($input1);
+        $this->assertNotNull($input2);
+        $this->assertNotNull($input3);
+        $this->assertNotNull($event);
 
-        $input1->keyDown('u', 'alt');
-        $this->assertEquals('key downed:1', $event->getText());
+        $input1->keyDown('u', $modifier);
+        $this->assertEquals('key downed:' . $eventProperties, $event->getText());
 
-        $input2->keyPress('r');
-        $this->assertEquals('key pressed:114 / 0', $event->getText());
+        $input2->keyPress('r', $modifier);
+        $this->assertEquals('key pressed:114 / ' . $eventProperties, $event->getText());
 
-        $input2->keyPress('r', 'alt');
-        $this->assertEquals('key pressed:114 / 1', $event->getText());
+        $input3->keyUp(78, $modifier);
+        $this->assertEquals('key upped:78 / ' . $eventProperties, $event->getText());
+    }
 
-        $input3->keyUp(78);
-        $this->assertEquals('key upped:78 / 0', $event->getText());
-
-        $input3->keyUp(78, 'alt');
-        $this->assertEquals('key upped:78 / 1', $event->getText());
+    public function provideKeyboardEventsModifiers()
+    {
+        return array(
+            'none' => array(null, '0 / 0 / 0 / 0'),
+            'alt' => array('alt', '1 / 0 / 0 / 0'),
+            'ctrl' => array('ctrl', '0 / 1 / 0 / 1'), // jQuery considers ctrl as being a metaKey in the normalized event
+            'shift' => array('shift', '0 / 0 / 1 / 0'),
+            'meta' => array('meta', '0 / 0 / 0 / 1'),
+        );
     }
 
     public function testWait()
     {
         $this->getSession()->visit($this->pathTo('/js_test.php'));
 
-        $this->getSession()->getPage()->findById('waitable')->click();
+        $waitable = $this->getSession()->getPage()->findById('waitable');
+        $this->assertNotNull($waitable);
+
+        $waitable->click();
         $this->getSession()->wait(3000, '$("#waitable").has("div").length > 0');
         $this->assertEquals('arrived', $this->getSession()->getPage()->find('css', '#waitable > div')->getText());
 
-        $this->getSession()->getPage()->findById('waitable')->click();
+        $waitable->click();
         $this->getSession()->wait(3000, 'false');
         $this->assertEquals('timeout', $this->getSession()->getPage()->find('css', '#waitable > div')->getText());
     }
@@ -190,6 +249,9 @@ abstract class JavascriptDriverTest extends GeneralDriverTest
         $clicker   = $this->getSession()->getPage()->find('css', '.elements div#clicker');
         $invisible = $this->getSession()->getPage()->find('css', '#invisible');
 
+        $this->assertNotNull($clicker);
+        $this->assertNotNull($invisible);
+
         $this->assertFalse($invisible->isVisible());
         $this->assertTrue($clicker->isVisible());
     }
@@ -200,6 +262,9 @@ abstract class JavascriptDriverTest extends GeneralDriverTest
 
         $draggable = $this->getSession()->getPage()->find('css', '#draggable');
         $droppable = $this->getSession()->getPage()->find('css', '#droppable');
+
+        $this->assertNotNull($draggable);
+        $this->assertNotNull($droppable);
 
         $draggable->dragTo($droppable);
         $this->assertEquals('Dropped!', $droppable->find('css', 'p')->getText());
@@ -240,23 +305,69 @@ abstract class JavascriptDriverTest extends GeneralDriverTest
         $this->assertEquals('onChangeSelect', $session->getPage()->find('css', '#output_foo_select')->getText());
     }
 
+    /**
+     * @dataProvider provideExecutedScript
+     */
+    public function testExecuteScript($script)
+    {
+        $this->getSession()->visit($this->pathTo('/index.php'));
+
+        $this->getSession()->executeScript($script);
+
+        sleep(1);
+
+        $heading = $this->getSession()->getPage()->find('css', 'h1');
+        $this->assertNotNull($heading);
+        $this->assertEquals('Hello world', $heading->getText());
+    }
+
+    public function provideExecutedScript()
+    {
+        return array(
+            array('document.querySelector("h1").textContent = "Hello world"'),
+            array('document.querySelector("h1").textContent = "Hello world";'),
+            array('function () {document.querySelector("h1").textContent = "Hello world";}()'),
+            array('function () {document.querySelector("h1").textContent = "Hello world";}();'),
+            array('(function () {document.querySelector("h1").textContent = "Hello world";})()'),
+            array('(function () {document.querySelector("h1").textContent = "Hello world";})();'),
+        );
+    }
+
+    /**
+     * @dataProvider provideEvaluatedScript
+     */
+    public function testEvaluateJavascript($script)
+    {
+        $this->getSession()->visit($this->pathTo('/index.php'));
+
+        $this->assertSame(2, $this->getSession()->evaluateScript($script));
+    }
+
+    public function provideEvaluatedScript()
+    {
+        return array(
+            array('1 + 1'),
+            array('1 + 1;'),
+            array('return 1 + 1'),
+            array('return 1 + 1;'),
+            array('function () {return 1+1;}()'),
+            array('(function () {return 1+1;})()'),
+            array('return function () { return 1+1;}()'),
+            array('return (function () {return 1+1;})()'),
+        );
+    }
+
     public function testWindowMaximize()
     {
         $this->getSession()->visit($this->pathTo('/index.php'));
         $session = $this->getSession();
         $driver = $session->getDriver();
 
-        try {
-            $driver->maximizeWindow();
-            $driver->wait(1000, false);
+        $driver->maximizeWindow();
+        $driver->wait(1000, false);
 
-            $script = "
-            return Math.abs(screen.availHeight - window.outerHeight) <= 100;
-            ";
+        $script = "return Math.abs(screen.availHeight - window.outerHeight) <= 100;";
 
-            $this->assertTrue($session->evaluateScript($script));
-        } catch (UnsupportedDriverActionException $e) {
-            $this->markTestSkipped('Maximize not yet implemented on this driver');
-        }
+        $this->assertTrue($session->evaluateScript($script));
     }
 }

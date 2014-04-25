@@ -1,18 +1,18 @@
 <?php
 
-namespace Behat\Mink\Element;
-
-use Behat\Mink\Session;
-use Behat\Mink\Exception\ElementException;
-use Behat\Mink\Exception\ElementNotFoundException;
-
 /*
- * This file is part of the Behat\Mink.
+ * This file is part of the Mink package.
  * (c) Konstantin Kudryashov <ever.zet@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
+namespace Behat\Mink\Element;
+
+use Behat\Mink\Session;
+use Behat\Mink\Exception\ElementException;
+use Behat\Mink\Exception\ElementNotFoundException;
 
 /**
  * Page element node.
@@ -85,11 +85,7 @@ class NodeElement extends TraversableElement
      */
     public function setValue($value)
     {
-        try {
-            $this->getSession()->getDriver()->setValue($this->getXpath(), $value);
-        } catch (\Exception $exception) {
-            throw new ElementException($this, $exception);
-        }
+        $this->getSession()->getDriver()->setValue($this->getXpath(), $value);
     }
 
     /**
@@ -109,7 +105,7 @@ class NodeElement extends TraversableElement
      *
      * @param string $name
      *
-     * @return mixed|null
+     * @return string|null
      */
     public function getAttribute($name)
     {
@@ -117,15 +113,27 @@ class NodeElement extends TraversableElement
     }
 
     /**
+     * Checks whether an element has a named CSS class
+     *
+     * @param string $className Name of the class
+     *
+     * @return boolean
+     */
+    public function hasClass($className)
+    {
+        if ($this->hasAttribute('class')) {
+            return in_array($className, explode(' ', $this->getAttribute('class')));
+        }
+
+        return false;
+    }
+
+    /**
      * Clicks current node.
      */
     public function click()
     {
-        try {
-            $this->getSession()->getDriver()->click($this->getXpath());
-        } catch (\Exception $exception) {
-            throw new ElementException($this, $exception);
-        }
+        $this->getSession()->getDriver()->click($this->getXpath());
     }
 
     /**
@@ -141,11 +149,7 @@ class NodeElement extends TraversableElement
      */
     public function doubleClick()
     {
-        try {
-            $this->getSession()->getDriver()->doubleClick($this->getXpath());
-        } catch (\Exception $exception) {
-            throw new ElementException($this, $exception);
-        }
+        $this->getSession()->getDriver()->doubleClick($this->getXpath());
     }
 
     /**
@@ -153,11 +157,7 @@ class NodeElement extends TraversableElement
      */
     public function rightClick()
     {
-        try {
-            $this->getSession()->getDriver()->rightClick($this->getXpath());
-        } catch (\Exception $exception) {
-            throw new ElementException($this, $exception);
-        }
+        $this->getSession()->getDriver()->rightClick($this->getXpath());
     }
 
     /**
@@ -165,11 +165,7 @@ class NodeElement extends TraversableElement
      */
     public function check()
     {
-        try {
-            $this->getSession()->getDriver()->check($this->getXpath());
-        } catch (\Exception $exception) {
-            throw new ElementException($this, $exception);
-        }
+        $this->getSession()->getDriver()->check($this->getXpath());
     }
 
     /**
@@ -177,11 +173,7 @@ class NodeElement extends TraversableElement
      */
     public function uncheck()
     {
-        try {
-            $this->getSession()->getDriver()->uncheck($this->getXpath());
-        } catch (\Exception $exception) {
-            throw new ElementException($this, $exception);
-        }
+        $this->getSession()->getDriver()->uncheck($this->getXpath());
     }
 
     /**
@@ -240,11 +232,7 @@ class NodeElement extends TraversableElement
      */
     public function attachFile($path)
     {
-        try {
-            $this->getSession()->getDriver()->attachFile($this->getXpath(), $path);
-        } catch (\Exception $exception) {
-            throw new ElementException($this, $exception);
-        }
+        $this->getSession()->getDriver()->attachFile($this->getXpath(), $path);
     }
 
     /**
@@ -294,8 +282,8 @@ class NodeElement extends TraversableElement
     /**
      * Presses specific keyboard key.
      *
-     * @param mixed  $char     could be either char ('b') or char-code (98)
-     * @param string $modifier keyboard modifier (could be 'ctrl', 'alt', 'shift' or 'meta')
+     * @param string|integer $char     could be either char ('b') or char-code (98)
+     * @param string         $modifier keyboard modifier (could be 'ctrl', 'alt', 'shift' or 'meta')
      */
     public function keyPress($char, $modifier = null)
     {
@@ -305,8 +293,8 @@ class NodeElement extends TraversableElement
     /**
      * Pressed down specific keyboard key.
      *
-     * @param mixed  $char     could be either char ('b') or char-code (98)
-     * @param string $modifier keyboard modifier (could be 'ctrl', 'alt', 'shift' or 'meta')
+     * @param string|integer $char     could be either char ('b') or char-code (98)
+     * @param string         $modifier keyboard modifier (could be 'ctrl', 'alt', 'shift' or 'meta')
      */
     public function keyDown($char, $modifier = null)
     {
@@ -316,8 +304,8 @@ class NodeElement extends TraversableElement
     /**
      * Pressed up specific keyboard key.
      *
-     * @param mixed  $char     could be either char ('b') or char-code (98)
-     * @param string $modifier keyboard modifier (could be 'ctrl', 'alt', 'shift' or 'meta')
+     * @param string|integer $char     could be either char ('b') or char-code (98)
+     * @param string         $modifier keyboard modifier (could be 'ctrl', 'alt', 'shift' or 'meta')
      */
     public function keyUp($char, $modifier = null)
     {
